@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "OLLama Lighthouse Reporter",
+  title: "LLM Accessibility Reporter",
   description: "Accessibility Checks for Everyone",
 };
 
