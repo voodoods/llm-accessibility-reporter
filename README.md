@@ -1,8 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Prerequisites
+
+Before starting the application, make sure you have 
+
+* the latest version of [Ollama](https://ollama.com/) installed
+* the latest verison of either [Google Chrome](https://www.google.com/intl/en_us/chrome/) or [Mozilla Firefox](https://www.mozilla.org/en/firefox/new/) installed
+
+
 ## Getting Started
 
-First, run the development server:
+Now, run the development server:
 
 ```bash
 npm run dev

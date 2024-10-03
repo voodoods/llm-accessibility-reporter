@@ -1,18 +1,22 @@
 "use server";
 
-import * as chromeLauncher from 'chrome-launcher';
+import puppeteer from 'puppeteer';
+import { AxePuppeteer } from '@axe-core/puppeteer';
+import { browser } from 'process';
+ 
+export async function createReport(url: string) {
+    const browser = await puppeteer.launch();
 
-export async function createReports(sites: string[]) {
-    let report;
-    const chrome = await chromeLauncher.launch({chromeFlags: ['--no-sandbox'], port: 8080 });
+    try {
+        const page = await browser.newPage();
+        await page.goto(url);
+        const results = await new AxePuppeteer(page).analyze();
+        
+        await browser.close();
+        return results
+    } catch (e) {
+        await browser.close();
+        throw new Error(`Axe Report failed on: ${url}`);
+    }
 
-    import('lighthouse').then(lighthouse => {
-        const options = {logLevel: "info", output: 'html', onlyCategories: ['accessibility'], port: chrome.port};
-        report = lighthouse(sites[0], options);
-    
-        chrome.kill();
-    }).catch(e => console.error(e))
-
-
-    return report;
 }
