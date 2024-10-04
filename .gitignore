@@ -37,3 +37,6 @@ next-env.d.ts
 
 #VSCode history plugin
 .history
+
+#AXE Reporter Artifacts
+artifacts/

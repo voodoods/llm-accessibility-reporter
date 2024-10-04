@@ -10,6 +10,7 @@ export interface PrompterResult {
 
 export interface PrompterResponse {
   results: PrompterResult[];
+  error?: Error;
 }
 
 export async function sendPrompt (prompt: string, maxResults: number): Promise<PrompterResponse> {
@@ -36,7 +37,10 @@ export async function sendPrompt (prompt: string, maxResults: number): Promise<P
   try {
     results = JSON.parse(response.message.content);
   } catch {
-    throw new Error('Prompt result is not a valid JSON format!')
+    return {
+      results: [],
+      error:new Error('Prompt result is not a valid JSON format!')
+    } 
   }
 
   if (results.results) {

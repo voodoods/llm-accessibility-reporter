@@ -19,6 +19,7 @@
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.1",
     "axe-core": "^4.10.0",
+    "axe-html-reporter": "^2.2.11",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.447.0",
@@ -34,7 +35,6 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@types/axe-core": "^2.0.2",
     "@types/axios": "^0.9.36",
     "@types/node": "^20",
     "@types/react": "^18",

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, ChangeEvent, useEffect } from "react";
+import { useState, ChangeEvent } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { PrompterResponse, sendPrompt } from "./prompter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { createReport } from "./reporter";
+import { createReport, createHTMLReportFormJSON } from "./reporter";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { AxeResults } from "axe-core";
 import './target-prompt.css';
@@ -19,6 +19,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import SearchIcon from '@mui/icons-material/Search';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import FindInPageIcon from '@mui/icons-material/FindInPage';
 import { Skeleton } from "../ui/skeleton";
 
 export function TargetPrompt() {
@@ -28,6 +29,7 @@ export function TargetPrompt() {
     const [isPromptLoading, setIsPromptLoading] = useState(false);
     const [isReportLoading, setIsReportLoading] = useState<{ [key: string] : boolean} | null>(null);
     const [promptResult, setPromptResult] = useState<PrompterResponse | null>(null);
+    const [promptError, setPropmptError] = useState(false);
     const [reports, setReports] = useState<AxeResults[]>([]);
     const [activeTab, setActiveTab] = useState("sites");
     const [activeAccordions, setActiveAccordions] = useState([""])
@@ -43,6 +45,7 @@ export function TargetPrompt() {
   
     const handleSendPrompt = async () => {
         setIsPromptLoading(true);
+        setActiveTab("sites");
 
         try {
         const response = await sendPrompt(inputPrompt, maxResults);
@@ -52,6 +55,7 @@ export function TargetPrompt() {
             setIsPromptLoading(false);
         }
         } catch {
+            setPropmptError(true);
             setIsPromptLoading(false);
         }
     }
@@ -66,7 +70,7 @@ export function TargetPrompt() {
 
     const handleSetActiveAccordions = (url: string, absolute?: boolean) => {
         if(absolute) {
-            setActiveAccordions([url]);
+            setActiveAccordions([activeAccordions.find(acc => acc.includes(url)) ?? url]);
             return
         }
         if(activeAccordions.some(acc => acc.includes(url))) {
@@ -77,18 +81,18 @@ export function TargetPrompt() {
     }
 
     const handleShowReport = (url: string) => {
-        handleSetActiveAccordions(url, true);
         setActiveTab("reports");
+        handleSetActiveAccordions(url, true);
     }
  
-    const getRating = (passes: number, violations: number) => {
-        const total = passes + violations;
-        const passPercentage = parseInt((passes * 100 / total).toFixed(2));
+    const getRating = (report: AxeResults) => {
+        const total = report.passes.length + report.violations.length + report.incomplete.length + report.inapplicable.length;
+        const passPercentage = parseInt((report.passes.length * 100 / total).toFixed(2));
 
         if(passPercentage === 100) {
             return (
                 <>
-                {passPercentage}% Excellent <MilitaryTechIcon className="text-yellow-400" />
+                {passPercentage}% Excellent <MilitaryTechIcon className="text-blue-400" />
                 </>
             )
         }
@@ -96,7 +100,7 @@ export function TargetPrompt() {
         if(passPercentage >= 90) {
             return (
                 <>
-                {passPercentage}% Good <SentimentSatisfiedAltIcon className="text-yellow-400" />
+                {passPercentage}% Good <SentimentSatisfiedAltIcon className="text-green-600" />
                 </>
             )
         }
@@ -104,7 +108,7 @@ export function TargetPrompt() {
         if (passPercentage >= 75) {
             return (
                 <>
-                {passPercentage}% Average <SentimentDissatisfiedIcon className="text-yellow-400" />
+                {passPercentage}% Average <SentimentDissatisfiedIcon className="text-yellow-600" />
                 </>
             )
         }
@@ -112,16 +116,17 @@ export function TargetPrompt() {
         if(passPercentage < 75) {
             return (
                 <>
-                {passPercentage}% Bad <SentimentVeryDissatisfiedIcon className="text-yellow-400" />
+                {passPercentage}% Bad <SentimentVeryDissatisfiedIcon className="text-red-600" />
                 </>
             )
         }
     }
 
-  useEffect(() => {
-    console.log("activeTab", activeTab);
-    console.log("activeAccordions", activeAccordions)
-  }, [activeTab, activeAccordions])
+  const handleViewFullReport = async (report: AxeResults) => {
+    const htmlReport = await createHTMLReportFormJSON(report);
+
+    window.open()?.document.write(htmlReport)
+  }
 
   return (
     <div className="flex flex-row w-full">
@@ -144,7 +149,13 @@ export function TargetPrompt() {
 
                 <TabsContent value="sites">
                     <div className="py-5 px-2">
-                        {!promptResult && !isPromptLoading ? "No Results yet." : (
+                        {!isPromptLoading && promptError ? (
+                            <>
+                                <p><b>LLM response did not match expected format.</b></p>
+                                <p>This happens sometimes. AI is unpredictable. Please try again or refresh page if this error keeps on happening</p>
+                            </>
+                        ): null}
+                        {!promptResult && !isPromptLoading && !promptError ? "No Results yet." : (
                             <>
                                 {isPromptLoading ? (
                                     <>
@@ -215,12 +226,17 @@ export function TargetPrompt() {
                     <Accordion value={activeAccordions} type="multiple" className="w-full">
                         {reports.map(report => (
                             <AccordionItem value={report.url} key={report.url}>
-                                <AccordionTrigger onClick={() => handleSetActiveAccordions(report.url)}>Report for {report.url}</AccordionTrigger>
+                                <AccordionTrigger onClick={() => handleSetActiveAccordions(report.url)}><h3 className="text-1xl">Report for {report.url}</h3></AccordionTrigger>
                                 <AccordionContent>
                                     <p><b>Report created at:</b> {Intl.DateTimeFormat("de-DE", { dateStyle: 'full', timeStyle: 'short', timeZone: 'Europe/Berlin'}).format(new Date(report.timestamp))}</p>
                                     <p><b>Passes:</b> {report.passes.length} <CheckCircleIcon className="text-green-500" /><br/></p>
                                     <p><b>Violations:</b> {report.violations.length} <CancelIcon className="text-red-500" /></p>
-                                    <p className="mt-5"><b>Rating:</b> {getRating(report.passes.length, report.violations.length)}</p>
+                                    <p><b>Incomplete:</b> {report.incomplete.length} <CancelIcon className="text-yellow-500" /></p>
+                                    <p><b>Inapplicable:</b> {report.inapplicable.length} <CancelIcon className="text-gray-500" /></p>
+                                    <p className="mt-5"><b>Accessibility Coverage:</b> {getRating(report)}</p>
+                                    <Button className="w-auto mt-5" onClick={() => handleViewFullReport(report)}>
+                                        <FindInPageIcon className="mr-2" /> View Full Report
+                                    </Button>
                                  
                                 </AccordionContent>
                             </AccordionItem>
